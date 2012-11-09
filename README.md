@@ -71,9 +71,15 @@ Supported services
 
 <img src="https://github.com/jed/authom/raw/master/lib/assets/37signals.ico" style="vertical-align:middle"> 37signals (by [nodebiscut](https://github.com/nodebiscut))
 
+<img src="https://github.com/jed/authom/raw/master/lib/assets/bitbucket.png" style="vertical-align:middle" width="16" height="16"> Bitbucket (by [aslakhellesoy](https://github.com/aslakhellesoy))
+
+<img src="https://github.com/jed/authom/raw/master/lib/assets/dropbox.ico" style="vertical-align:middle"> Dropbox (by [cartuchogl](https://github.com/cartuchogl))
+
 <img src="https://github.com/jed/authom/raw/master/lib/assets/dwolla.ico" style="vertical-align:middle"> Dwolla (by [nodebiscut](https://github.com/nodebiscut))
 
 <img src="https://github.com/jed/authom/raw/master/lib/assets/facebook.ico" style="vertical-align:middle"> Facebook (by [jed](https://github.com/jed))
+
+<img src="https://github.com/jed/authom/raw/master/lib/assets/fitbit.ico" style="vertical-align:middle"> Fitbit (by [pspeter3](https://github.com/pspeter3))
 
 <img src="https://github.com/jed/authom/raw/master/lib/assets/foodspotting.ico" style="vertical-align:middle"> Foodspotting (by [kimtaro](https://github.com/kimtaro))
 
@@ -87,6 +93,8 @@ Supported services
 
 <img src="https://github.com/jed/authom/raw/master/lib/assets/instagram.ico" style="vertical-align:middle"> Instagram (by [jed](https://github.com/jed))
 
+<img src="https://github.com/jed/authom/raw/master/lib/assets/linkedin.ico" style="vertical-align:middle"> LinkedIn (by [shinecita](https://github.com/shinecita))
+
 <img src="https://github.com/jed/authom/raw/master/lib/assets/meetup.ico" style="vertical-align:middle"> Meetup (by [softprops](https://github.com/softprops))
 
 <img src="https://github.com/jed/authom/raw/master/lib/assets/soundcloud.ico" style="vertical-align:middle"> SoundCloud (by [jed](https://github.com/jed))
@@ -94,6 +102,7 @@ Supported services
 <img src="https://github.com/jed/authom/raw/master/lib/assets/twitter.ico" style="vertical-align:middle"> Twitter (by [jed](https://github.com/jed))
 
 <img src="https://github.com/jed/authom/raw/master/lib/assets/windowslive.ico" style="vertical-align:middle"> Windows Live (by [jed](https://github.com/jed))
+
 
 Installation and Setup
 ----------------------
@@ -122,8 +131,6 @@ authom aims to solve a smaller problem, more agnostically. It trades convenience
 - authom was built for node, and can also work with Express, while everyauth is tied to Express and Connect. everyauth aims for a much more ambitious integration, but at the expense of locking you into a particular stack. authom takes a more UNIX approach; since it doesn't handle logins, persistence, sessions, or anything past authentication, it is more of a tool and less of a framework.
 
 - authom uses native node.js conventions such as EventEmitters and objects, while everyauth uses promises and a chaining config API. This is of course subjective, but the authom API aims to be closer to the APIs of node.js itself.
-
-- authom works with node.js v0.6. (this was not true of everyauth at the time this library was written)
 
 API
 ---
@@ -224,6 +231,39 @@ server.on("request", function(req, res) {
 server.listen(8000)
 ```
 
+### authom.registerService(serviceName, Service)
+
+Authom-compliant services can be registered using this method. This is useful for adding custom authentication services not suited to be part of the ```/lib``` core services. (For example a business-specific in-house authentication service.) _Custom services will override existing services of the same name._
+
+```javascript
+var authom = require("authom")
+  , EventEmitter = require("events").EventEmitter
+
+//Custom authentication service
+var IpAuth = function(options) {
+  var server = new EventEmitter
+  var whiteList = options.whiteList || ["127.0.0.1", "::1"]
+
+  server.on("request", function(req, res) {
+    if (~whiteList.indexOf(req.connection.remoteAddress)) {
+      server.emit("auth", req, res, {status: "yay"})
+    }
+    else {
+      server.emit("error", req, res, {status: "boo"})
+    }
+  })
+
+  return server
+}
+
+authom.registerService("ip-auth", IpAuth)
+
+auth.createServer({
+  service: "ip-auth",
+  whiteList : ["127.0.0.1", "::1", "192.168.0.1"]
+})
+```
+
 ### authom.route
 
 A regular expression that is run on the pathname of every request. authom will only run if this expression is matched. By default, it is `/^\/auth\/([^\/]+)\/?$/`.
@@ -231,6 +271,7 @@ A regular expression that is run on the pathname of every request. authom will o
 ### authom.app
 
 This is a convenience Express app, which should be mounted at a path containing a `:service` parameter.
+
 
 Providers
 ---------
@@ -250,6 +291,26 @@ var signals = authom.createServer({
   service: "37signals",
   id: "c2098292571a03070eb12746353997fb8d6f0e00",
   secret: "4cb7f46fa83f73ec99d37162b946522b9e7a4d5a"
+})
+```
+
+### Dropbox ([create an app](https://www.dropbox.com/developers/apps))
+
+Options:
+
+- `service`: "dropbox"
+- `id`: the application's `App key`
+- `secret`: the application's `App secret`
+- `info`: specify `true` if you want to get the user info (a little slower - one extra request)
+
+Example:
+
+```javascript
+var dropbox = authom.createServer({
+  service: "dropbox",
+  id: "zuuteb2w7i82mdg",
+  secret: "rj503lgqodxzvbp"
+  info: true
 })
 ```
 
@@ -290,6 +351,23 @@ var facebook = authom.createServer({
   id: "256546891060909",
   secret: "e002572fb07423fa66fc38c25c9f49ad",
   scope: []
+})
+```
+### Fitbit ([request api key](https://dev.fitbit.com/apps/new))
+
+Options:
+
+- `service`: "fitbit"
+- `id`: the application's `Client ID`
+- `secret`: the application's `Client secret`
+
+Example:
+
+```javascript
+var fitbit = authom.createServer({
+  service: "fitbit",
+  id: "45987d27b0e14780bb1a6f1769e679dd",
+  secret: "3d403aaeb5b84bc49e98ef8b946a19d5"
 })
 ```
 
@@ -351,6 +429,24 @@ var github = authom.createServer({
 
 Make sure that the callback URL used by your application has the same hostname and port as that specified for your application. If they are different, you will get `redirect_uri_mismatch` errors.
 
+### Bitbucket (Go to https://bitbucket.org/account/user/YOURACCOUNT/api to create an app)
+
+Options:
+
+- `service`: "bitbucket"
+- `id`: the application's `Key`
+- `secret`: the application's `Secret`
+
+Example:
+
+```javascript
+var bitbucket = authom.createServer({
+  service: "bitbucket",
+  id: "Fs7WNJSqgUSL8zBAZD",
+  secret: "yNTv52kS7DWSztpLgbLWKD2AaNxGq2mB"
+})
+```
+
 ### Google ([create an app](https://code.google.com/apis/console/))
 
 Options:
@@ -407,6 +503,25 @@ var instagram = authom.createServer({
   service: "instagram",
   id: "e55497d0ebc24289aba4e715f1ab7d2a",
   secret: "a0e7064bfda64e57a46dcdba48378776"
+})
+```
+
+### LinkedIn ([create an app](https://www.linkedin.com/secure/developer?newapp=))
+
+Options:
+
+- `service`: "linkedin"
+- `id`: the application's `Api key`
+- `secret`: the application's `Secret key`
+- `scopes`: Optional. An array with the scopes, fe: ["r_fullprofile", "r_emailaddress"]. Default: r_fullprofile
+
+Example:
+
+```javascript
+authom.createServer({
+  service: "linkedin",
+  id: "AsjCfHAugMghuYtHLS9Xzy",
+  secret: "arom3XHqDSDPceyHti6tRQGoywiISY0vZWfzhQUxXZ5"
 })
 ```
 
@@ -467,6 +582,29 @@ var windowslive = authom.createServer({
   scope: "wl.basic"
 })
 ```
+
+
+### LinkedIn ([create an app](https://www.linkedin.com/secure/developer?newapp=))
+
+Options:
+
+- `service`: "linkedin"
+- `id`: the application's `Api key`
+- `secret`: the application's `Secret key`
+- `scopes`: Optional. An array with the scopes, fe: ["r_fullprofile", "r_emailaddress"]. Default: r_fullprofile
+- `fields`: Optional. Comma separated (no spaces) String with the linkedIn [fields](https://developer.linkedin.com/documents/profile-fields#fullprofile) to include in the query, fe: "first-name,last-name,picture-url,industry,summary,specialties,skills,projects,headline,site-standard-profile-request"
+- `format`: Optional. Format of the response, default "json".
+
+Example:
+
+```javascript
+authom.createServer({
+  service: "linkedin",
+  id: "AsjCfHAugMghuYtHLS9Xzy",
+  secret: "arom3XHqDSDPceyHti6tRQGoywiISY0vZWfzhQUxXZ5"
+})
+```
+
 
 Extending authom
 -----------------
